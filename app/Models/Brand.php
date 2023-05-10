@@ -4,10 +4,10 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class User extends Model
+class Brand extends Model
 {
-    protected $table = 'user';
+    protected $table = 'brand';
     use HasFactory;
-    protected $fillable = ['username', 'password', 'accessToken'];
+    protected $fillable = ['name'];
     public $timestamps = false;
 }

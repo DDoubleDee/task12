@@ -159,10 +159,10 @@ class MachineController extends Controller
         return $value;
     }
 
-    public function create($request) {
+    public function create(Request $request) {
         $validator = Validator::make($request->all(), [
             'name' => 'required',
-            'imageUrl' => 'required',
+            'imageBase64' => 'required',
             'motherboardId' => 'required',
             'powerSupplyId' => 'required',
             'processorId' => 'required',
@@ -174,12 +174,76 @@ class MachineController extends Controller
         ], $messages = validatorMessages());
         if ($validator->fails()) {
             return convertValidator($validator);
-        }#'name', 'description', 'imageUrl', 'motherboardId', 'processorId', 'ramMemoryId', 'ramMemoryAmount', 'graphicCardId', 'graphicCardAmount', 'powerSupplyId'
+        }
         $body = $request->all();
+        $mboard = Motherboard::where('id', $body["motherboardId"])->get()->first();
+        $cpu = Processor::where('id', $body["processorId"])->get()->first();
+        $RAM = RAMMemory::where('id', $body["ramMemoryId"])->get()->first();
+        $gpu = GraphicCard::where('id', $body["graphicCardId"])->get()->first();
+        $psup = PowerSupply::where('id', $body["powerSupplyId"])->get()->first();
+        $m2 = 0;
+        $sata = 0;
+        foreach ($request->input('storageDevices') as $value) {
+            $store = StorageDevice::where('id', $value["storageDeviceId"])->get()->first();
+            if($store->storageDeviceInterface == "m2"){
+                $m2 = $m2 + $value["amount"];
+            } else {
+                $sata = $sata + $value["amount"];
+            }
+        }
+        $incompatibilities = incompatibility_check($mboard, $cpu, $RAM, $body["ramMemoryAmount"], $body["graphicCardAmount"], $sata, $m2, $gpu, $psup);
+        if($incompatibilities != []) {
+            return response($incompatibilities, 400)->header('Content-Type', 'application/json');
+        }
         $machine = Machine::create($body);
         foreach ($request->input('storageDevices') as $value) {
             MachineHasStorageDevice::create(["machineId" => $machine->id, "storageDeviceId" => $value["storageDeviceId"], "amount" => $value["amount"]]);
         }
+        return response([relations($machine->toArray(), "machines")], 200)->header('Content-Type', 'application/json');
+    }
+
+    public function update(Request $request) {
         return response([], 200)->header('Content-Type', 'application/json');
+    }
+
+    private function incompatibility_check($mboard, $cpu, $RAM, $ramMemoryAmount, $graphicCardAmount, $sata, $m2, $gpu, $psup) {
+        $incompatibilities = [];
+        if($mboard->socketTypeId != $cpu->socketTypeId){
+            $incompatibilities["socket type"] = "Chosen motherboard is incompatible with chosen CPU due to a different socket type";;
+        }
+        if($mboard->maxTdp < $cpu->tdp){
+            $incompatibilities["max tdp"] = "Chosen motherboard's max tdp is lower than chosen CPU's tdp";
+        }
+        if($mboard->ramMemoryTypeId != $RAM->ramMemoryTypeId){
+            $incompatibilities["ram type"] = "Chosen motherboard is incompatible with the chosen RAM card due to a different RAM type";
+        }
+        if($mboard->ramMemoryAmount < $ramMemoryAmount){
+            $incompatibilities["ram amount"] = "Chosen motherboard does not have enough RAM card slots";
+        }
+        if($ramMemoryAmount <= 0){
+            $incompatibilities["ram amount"] = "A machine must have at least one RAM card";
+        }
+        if($mboard->graphicCardAmount < $graphicCardAmount){
+            $incompatibilities["gpu amount"] = "Chosen motherboard does not have enough PCI Express slots";
+        }
+        if($graphicCardAmount <= 0){
+            $incompatibilities["ram amount"] = "A machine must have at least one graphic card";
+        }
+        if($mboard->sataSlots < $sata){
+            $incompatibilities["sata amount"] = "Chosen motherboard does not have enough SATA slots";
+        }
+        if($mboard->m2Slots < $m2){
+            $incompatibilities["m2 amount"] = "Chosen motherboard does not have enough M2 slots";
+        }
+        if($m2 + $sata <= 0){
+            $incompatibilities["storage amount"] = "A machine must have at least one storage device";
+        }
+        if($graphicCardAmount > 1 && $gpu->supportMultiGpu == 0){
+            $incompatibilities["lack of sli/crossfire"] = "There can be no more than 1 of chosen graphic card due to lack of SLI/Crossfire support";
+        }
+        if($graphicCardAmount * $gpu->minimumPowerSupply < $psup->potency){
+            $incompatibilities["power supply"] = "Chosen power supply cannot power chosen graphic card or their amount";
+        }
+        return $incompatibilities;
     }
 }

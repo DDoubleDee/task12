@@ -23,7 +23,7 @@ class MachineController extends Controller
     {
         $size = $request->input('pageSize') || 10;
         $page = $request->input('page') || 1;
-        switch ($type) {
+        switch ($type) { # get appropriate data
             case "motherboards":
                 $items = Motherboard::get();
                 paginate($items, $size, $page, $type);
@@ -75,7 +75,7 @@ class MachineController extends Controller
         }
         $size = $request->input('pageSize') || 10;
         $page = $request->input('page') || 1;
-        switch ($type) {
+        switch ($type) { # get appropriate data
             case "motherboards":
                 $items = Motherboard::where('name', 'ILIKE', '%'.trim($request->input('q')).'%')->get();
                 $items = paginate($items, $size, $page, $type);
@@ -118,7 +118,7 @@ class MachineController extends Controller
     }
 
     public function create(Request $request) {
-        $validator = Validator::make($request->all(), [
+        $validator = Validator::make($request->all(), [ # check input
             'name' => 'required',
             'imageBase64' => 'required',
             'motherboardId' => 'required',
@@ -134,14 +134,14 @@ class MachineController extends Controller
             return convertValidator($validator);
         }
         $body = $request->all();
-        $mboard = Motherboard::where('id', $body["motherboardId"])->get()->first();
-        $cpu = Processor::where('id', $body["processorId"])->get()->first();
-        $RAM = RAMMemory::where('id', $body["ramMemoryId"])->get()->first();
-        $gpu = GraphicCard::where('id', $body["graphicCardId"])->get()->first();
-        $psup = PowerSupply::where('id', $body["powerSupplyId"])->get()->first();
+        $mboard = Motherboard::where('id', $body["motherboardId"])->get()->first(); # get all parts
+        $cpu = Processor::where('id', $body["processorId"])->get()->first(); # get all parts
+        $RAM = RAMMemory::where('id', $body["ramMemoryId"])->get()->first(); # get all parts
+        $gpu = GraphicCard::where('id', $body["graphicCardId"])->get()->first(); # get all parts
+        $psup = PowerSupply::where('id', $body["powerSupplyId"])->get()->first(); # get all parts
         $m2 = 0;
         $sata = 0;
-        foreach ($request->input('storageDevices') as $value) {
+        foreach ($request->input('storageDevices') as $value) { # count storage devices
             $store = StorageDevice::where('id', $value["storageDeviceId"])->get()->first();
             if($store->storageDeviceInterface == "m2"){
                 $m2 = $m2 + $value["amount"];
@@ -150,7 +150,7 @@ class MachineController extends Controller
             }
         }
         $incompatibilities = incompatibility_check($mboard, $cpu, $RAM, $body["ramMemoryAmount"], $body["graphicCardAmount"], $sata, $m2, $gpu, $psup);
-        if($incompatibilities != []) {
+        if($incompatibilities != []) { # check for incompatibility
             return response($incompatibilities, 400)->header('Content-Type', 'application/json');
         }
         $image = explode(',', $body["imageBase64"]);
@@ -158,31 +158,31 @@ class MachineController extends Controller
         if($ext != "png" || $ext != "jpeg" || $ext != "jpg"){
             return response(["message" => "please use jpg, png or jpeg in imageBase64"], 400)->header('Content-Type', 'application/json');
         }
-        Storage::put(strval($machine->id)."7143143.".$ext, base64_decode($image[1]));
+        Storage::put(strval($machine->id)."7143143.".$ext, base64_decode($image[1])); # store the image
         $body['imageUrl'] = strval($machine->id)."7143143";
-        $machine = Machine::create($body);
-        foreach ($request->input('storageDevices') as $value) {
+        $machine = Machine::create($body); # create machine
+        foreach ($request->input('storageDevices') as $value) { # create storage devices
             MachineHasStorageDevice::create(["machineId" => $machine->id, "storageDeviceId" => $value["storageDeviceId"], "amount" => $value["amount"]]);
         }
         return response([relations($machine->toArray(), "machines")], 200)->header('Content-Type', 'application/json');
     }
 
     public function update(Request $request, $id) {
-        $machine = Machine::where('id', intval($id))->get()->first();
+        $machine = Machine::where('id', intval($id))->get()->first(); # get machine
         if(is_null($machine)){
             return response(["message" => "machine model not found"], 404)->header('Content-Type', 'application/json');
         }
-        $machine->name = $request->input('name') || $machine->name;
-        $machine->motherboardId = $request->input('motherboardId') || $machine->motherboardId;
-        $machine->powerSupplyId = $request->input('powerSupplyId') || $machine->powerSupplyId;
-        $machine->processorId = $request->input('processorId') || $machine->processorId;
-        $machine->ramMemoryId = $request->input('ramMemoryId') || $machine->ramMemoryId;
-        $machine->ramMemoryAmount = $request->input('ramMemoryAmount') || $machine->ramMemoryAmount;
-        $machine->graphicCardId = $request->input('graphicCardId') || $machine->graphicCardId;
-        $machine->graphicCardAmount = $request->input('graphicCardAmount') || $machine->graphicCardAmount;
+        $machine->name = $request->input('name') || $machine->name; # update data
+        $machine->motherboardId = $request->input('motherboardId') || $machine->motherboardId; # update data
+        $machine->powerSupplyId = $request->input('powerSupplyId') || $machine->powerSupplyId; # update data
+        $machine->processorId = $request->input('processorId') || $machine->processorId; # update data
+        $machine->ramMemoryId = $request->input('ramMemoryId') || $machine->ramMemoryId; # update data
+        $machine->ramMemoryAmount = $request->input('ramMemoryAmount') || $machine->ramMemoryAmount; # update data
+        $machine->graphicCardId = $request->input('graphicCardId') || $machine->graphicCardId; # update data
+        $machine->graphicCardAmount = $request->input('graphicCardAmount') || $machine->graphicCardAmount; # update data
         $m2 = 0;
         $sata = 0;
-        if(is_null($request->input('storageDevices'))){
+        if(is_null($request->input('storageDevices'))){ # check storage devices
             foreach (MachineHasStorageDevice::where("machineId", $machine->id)->get() as $value) {
                 $store = StorageDevice::where('id', $value->storageDeviceId)->get()->first();
                 if($store->storageDeviceInterface == "m2"){
@@ -202,7 +202,7 @@ class MachineController extends Controller
             }
         }
         $incompatibilities = incompatibility_check(Motherboard::where('id', $machine->processorId)->get()->first(), Processor::where('id', $machine->processorId)->get()->first(), RAMMemory::where('id', $machine->ramMemoryId)->get()->first(), $machine->ramMemoryAmount, $machine->graphicCardAmount, $sata, $m2, GraphicCard::where('id', $machine->graphicCardId)->get()->first(), PowerSupply::where('id', $machine->powerSupplyId)->get()->first());
-        if($incompatibilities != []) {
+        if($incompatibilities != []) { # check for incompatibility
             return response($incompatibilities, 400)->header('Content-Type', 'application/json');
         }
         if(!is_null($request->input('imageBase64'))){
@@ -212,10 +212,10 @@ class MachineController extends Controller
                 return response(["message" => "please use jpg, png or jpeg in imageBase64"], 400)->header('Content-Type', 'application/json');
             }
             Storage::delete([strval($machine->id)."7143143.png", strval($machine->id)."7143143.jpeg", strval($machine->id)."7143143.jpg"]);
-            Storage::put(strval($machine->id)."7143143.".$ext, base64_decode($image[1]));
-            $body['imageUrl'] = strval($machine->id)."7143143";
+            Storage::put(strval($machine->id)."7143143.".$ext, base64_decode($image[1])); # update image
+            $machine->imageUrl = strval($machine->id)."7143143";
         }
-        $machine = Machine::create($body);
+        $machine = $machine->save();
         if(!is_null($request->input('storageDevices'))){
             foreach (MachineHasStorageDevice::where("machineId", $machine->id)->get() as $value) {
                 $value->delete();

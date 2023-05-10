@@ -65,18 +65,16 @@ class MachineController extends Controller
         return response($items, 200)->header('Content-Type', 'application/json');
     }
     
-    public function search(Request $request)
+    public function search(Request $request, $type, $q)
     {
         $validator = Validator::make($request->all(), [
             'q' => 'required',
-            'category' => 'required',
         ], $messages = validatorMessages());
         if ($validator->fails()) {
             return convertValidator($validator);
         }
         $size = $request->input('pageSize') || 10;
         $page = $request->input('page') || 1;
-        $type = $request->input('category');
         switch ($type) {
             case "motherboards":
                 $items = Motherboard::where('name', 'ILIKE', '%'.trim($request->input('q')).'%')->get();

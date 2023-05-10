@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\MachineController;
 
 /*
 |--------------------------------------------------------------------------
@@ -15,8 +16,12 @@ use App\Http\Controllers\UserController;
 |
 */
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
-});
-
-Route::get('/user', [UserController::class, 'get'])->middleware('utoken');
+Route::post('/login', [UserController::class, 'login']);
+Route::post('/images/{id}', [MachineController::class, 'image']);
+Route::delete('/logout', [UserController::class, 'logout'])->middleware('utoken');
+Route::get('/{type}', [MachineController::class, 'get'])->middleware('utoken');
+Route::get('/search/{type}', [MachineController::class, 'search'])->middleware('utoken');
+Route::post('/machines', [MachineController::class, 'create'])->middleware('utoken');
+Route::put('/machines/{id}', [MachineController::class, 'update'])->middleware('utoken');
+Route::delete('/machines/{id}', [MachineController::class, 'delete'])->middleware('utoken');
+Route::post('/verify-compatibility', [MachineController::class, 'check'])->middleware('utoken');

@@ -234,42 +234,42 @@ class MachineController extends Controller
         }
         foreach (MachineHasStorageDevice::where("machineId", $machine->id)->get() as $value) {
             $value->delete();
-        }
+        } # delete storage devices and everything else before the main machine item
         Storage::delete([strval($machine->id)."7143143.png", strval($machine->id)."7143143.jpeg", strval($machine->id)."7143143.jpg"]);
         $machine->delete();
         return response(null, 204);
     }
 
     public function check(Request $request) {
-        $validator = Validator::make($request->all(), [
-            'motherboardId' => 'required',
+        $validator = Validator::make($request->all(), [ # check inputs
+            'motherboardId' => 'required', 
             'powerSupplyId' => 'required',
         ], $messages = validatorMessages());
         if ($validator->fails()) {
             return convertValidator($validator);
         }
-        $mboard = Motherboard::where('id', $request->input('motherboardId'))->get()->first();
-        $psup = PowerSupply::where('id', $request->input('powerSupplyId'))->get()->first();
-        $ramMemoryAmount = null;
-        $graphicCardAmount = null
-        $sata = null;
-        $m2 = null;
-        $gpu = null;
-        $cpu = null;
-        $ram = null;
-        if(!is_null($request->input('graphicCardId')) && !is_null($request->input('graphicCardAmount'))){
+        $mboard = Motherboard::where('id', $request->input('motherboardId'))->get()->first(); # get starting data
+        $psup = PowerSupply::where('id', $request->input('powerSupplyId'))->get()->first(); # get starting data
+        $ramMemoryAmount = null; # get starting data
+        $graphicCardAmount = null # get starting data
+        $sata = null; # get starting data
+        $m2 = null; # get starting data
+        $gpu = null; # get starting data
+        $cpu = null; # get starting data
+        $ram = null; # get starting data
+        if(!is_null($request->input('graphicCardId')) && !is_null($request->input('graphicCardAmount'))){ # get parts data
             $gpu = GraphicCard::where('id', $request->input('graphicCardId'))->get()->first();
             $graphicCardAmount = $request->input('graphicCardAmount');
         }
-        if(!is_null($request->input('ramMemoryId')) && !is_null($request->input('ramMemoryAmount'))){
+        if(!is_null($request->input('ramMemoryId')) && !is_null($request->input('ramMemoryAmount'))){ # get parts data
             $ram = RAMMemory::where('id', $request->input('ramMemoryId'))->get()->first();
             $graphicCardAmount = $request->input('ramMemoryAmount');
         }
-        if(!is_null($request->input('processorId'))){
+        if(!is_null($request->input('processorId'))){ # get parts data
             $cpu = Processor::where('id', $request->input('processorId'))->get()->first();
         }
         $inc = incompatibility_check($mboard, $cpu, $ram, $ramMemoryAmount, $graphicCardAmount, $sata, $m2, $gpu, $psup);
-        if($inc != []){
+        if($inc != []){ # check incompatibility
             return response($inc, 400)->header('Content-Type', 'application/json');
         }
         return response(["message" => "Valid machine"], 200)->header('Content-Type', 'application/json');
@@ -278,11 +278,11 @@ class MachineController extends Controller
     public function image(Request $request, $id) {
         $image = Storage::get($id.".png");
         $ext = "png";
-        if(is_null($image)){
+        if(is_null($image)){ # get correct image with extension
             $image = Storage::get($id.".jpeg");
             $ext = "jpeg";
         }
-        if(is_null($image)){
+        if(is_null($image)){ # get correct image with extension
             $image = Storage::get($id.".jpg");
             $ext = "jpg";
         }
@@ -294,7 +294,7 @@ class MachineController extends Controller
 
     private function incompatibility_check($mboard, $cpu, $ram, $ramMemoryAmount, $graphicCardAmount, $sata, $m2, $gpu, $psup) {
         $incompatibilities = [];
-        if(!is_null($cpu)){
+        if(!is_null($cpu)){ # check cpu compatibility
             if($mboard->socketTypeId != $cpu->socketTypeId){
                 $incompatibilities["socket type"] = "Chosen motherboard is incompatible with chosen CPU due to a different socket type";;
             }
@@ -302,7 +302,7 @@ class MachineController extends Controller
                 $incompatibilities["max tdp"] = "Chosen motherboard's max tdp is lower than chosen CPU's tdp";
             }
         }
-        if(!is_null($ram)){
+        if(!is_null($ram)){ # check ram compatibility
             if($mboard->ramMemoryTypeId != $ram->ramMemoryTypeId){
                 $incompatibilities["ram type"] = "Chosen motherboard is incompatible with the chosen RAM card due to a different RAM type";
             }
@@ -313,7 +313,7 @@ class MachineController extends Controller
                 $incompatibilities["ram amount"] = "A machine must have at least one RAM card";
             }
         }
-        if(!is_null($gpu)){
+        if(!is_null($gpu)){ # cehck gpu compatibility
             if($mboard->graphicCardAmount < $graphicCardAmount){
                 $incompatibilities["gpu amount"] = "Chosen motherboard does not have enough PCI Express slots";
             }
@@ -327,7 +327,7 @@ class MachineController extends Controller
                 $incompatibilities["power supply"] = "Chosen power supply cannot power chosen graphic card or their amount";
             }
         }
-        if(!is_null($sata) && !is_null($m2)){
+        if(!is_null($sata) && !is_null($m2)){ # check storage device compatibility
             if($mboard->sataSlots < $sata){
                 $incompatibilities["sata amount"] = "Chosen motherboard does not have enough SATA slots";
             }
@@ -343,7 +343,7 @@ class MachineController extends Controller
 
     private function paginate($items, $size, $page, $type) {
         $items = array_chunk($items, $size)[$page];
-        foreach ($items as $value) {
+        foreach ($items as $value) { # load relations for items
             relations($value->toArray(), $type);
         }
         return $items;
@@ -353,7 +353,7 @@ class MachineController extends Controller
         switch($type) {
             case "machines":
                 $storageDevices = MachineHasStorageDevice::where('machineId', $value->id)->get();
-                foreach ($storageDevices as $storageDevice) {
+                foreach ($storageDevices as $storageDevice) { # get storage devices
                     $storageDevice->toArray();
                     $storageDevice["storageDevice"] = relations(StorageDevice::where($storageDevice["storageDeviceId"]), "fff");
                 }
@@ -362,22 +362,34 @@ class MachineController extends Controller
                 $value["ramMemory"] = relations(RAMMemory::where('id', $value["ramMemoryId"])->get()->first(), "ram-memories");
                 $value["graphicCard"] = relations(GraphicCard::where('id', $value["graphicCardId"])->get()->first(), "fff");
                 $value["storageDevices"] = $storageDevices;
+                unset($value["motherboardId"]);
+                unset($value["processorId"]);
+                unset($value["ramMemoryId"]);
+                unset($value["graphicCardId"]);
                 break;
             case "motherboards":
                 $value["brand"] = Brand::where('id', $value["brandId"]);
                 $value["socketType"] = SocketType::where('id', $value["socketTypeId"]);
                 $value["ramMemoryType"] = RAMMemoryType::where('id', $value["ramMemoryTypeId"]);
+                unset($value["brandId"]);
+                unset($value["socketTypeId"]);
+                unset($value["ramMemoryTypeId"]);
                 break;
             case "processors":
                 $value["brand"] = Brand::where('id', $value["brandId"]);
                 $value["socketType"] = SocketType::where('id', $value["socketTypeId"]);
+                unset($value["brandId"]);
+                unset($value["socketTypeId"]);
                 break;
             case "ram-memories":
                 $value["brand"] = Brand::where('id', $value["brandId"]);
                 $value["ramMemoryType"] = RAMMemoryType::where('id', $value["ramMemoryTypeId"]);
+                unset($value["brandId"]);
+                unset($value["ramMemoryTypeId"]);
                 break;
             default:
                 $value["brand"] = Brand::where('id', $value["brandId"]);
+                unset($value["brandId"]);
         }
         return $value;
     }

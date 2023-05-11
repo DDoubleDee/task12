@@ -418,6 +418,7 @@ class MachineController extends Controller
                     $storageDevice->toArray();
                     $storageDevice["storageDevice"] = MachineController::relations(StorageDevice::where('id', $storageDevice["storageDeviceId"])->get()->first()->toArray(), "fff");
                     unset($storageDevice["storageDeviceId"]);
+                    unset($storageDevice["machineId"]);
                 }
                 $value["motherboard"] = MachineController::relations(Motherboard::where('id', $value["motherboardId"])->get()->first()->toArray(), "motherboards");
                 $value["processor"] = MachineController::relations(Processor::where('id', $value["processorId"])->get()->first()->toArray(), "processors");

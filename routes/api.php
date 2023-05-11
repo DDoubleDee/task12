@@ -17,7 +17,7 @@ use App\Http\Controllers\MachineController;
 */
 
 Route::post('/login', [UserController::class, 'login']);
-Route::post('/images/{id}', [MachineController::class, 'image']);
+Route::get('/images/{id}', [MachineController::class, 'image']);
 Route::delete('/logout', [UserController::class, 'logout'])->middleware('utoken');
 Route::get('/{type}', [MachineController::class, 'get'])->middleware('utoken');
 Route::get('/search/{type}', [MachineController::class, 'search'])->middleware('utoken');

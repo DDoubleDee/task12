@@ -17,7 +17,7 @@ class Controller extends BaseController
             $string = explode("|", $error);
             $violations[$string[0]] = ['message' => $string[1]];
         }
-        return response(['status' => 'invalid', 'message' => 'Request body is not valid', 'violations' => $violations], 400)->header('Content-Type', 'application/json');
+        return response(['message' => 'request body is not valid', 'violations' => $violations], 400)->header('Content-Type', 'application/json');
     }
     
     public function validatorMessages() {

@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
  
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use App\Models\User;
 
@@ -14,15 +16,15 @@ class UserController extends Controller
         $validator = Validator::make($request->all(), [
             'username' => 'required',
             'password' => 'required',
-        ], $messages = validatorMessages());
+        ], $messages = Controller::validatorMessages());
         if ($validator->fails()) {
-            return convertValidator($validator);
+            return Controller::convertValidator($validator);
         }
         $user = User::where('username', $request->input('username'))->get()->first();
         if ($request->input('password') != $user->password || is_null($user)) {
             return response(['message' => 'Invalid credentials'], 400)->header('Content-Type', 'application/json');
         }
-        if ($user->accessToken != null) {
+        if ($user->accessToken != "") {
             return response(['message' => 'User already authenticated'], 403)->header('Content-Type', 'application/json');
         }
         $token = Str::random(100);
@@ -34,7 +36,7 @@ class UserController extends Controller
     public function logout(Request $request)
     {
         $user = User::where('accessToken', $request->bearerToken())->get()->first();
-        $user->accessToken = null;
+        $user->accessToken = "";
         $user->save();
         return response(["message" => "logout successfully"], 200)->header('Content-Type', 'application/json');
     }

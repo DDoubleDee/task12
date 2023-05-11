@@ -19,11 +19,11 @@ class UserTokenCheck
     {
         $bearer = $request->bearerToken();
         if (is_null($bearer)) {
-            return response(['message' => 'Missing token'], 401)->header('Content-Type', 'application/json');
+            return response(['message' => 'Authentication required'], 401)->header('Content-Type', 'application/json');
         }
         $bearer = User::where('accessToken', $bearer)->get()->first();
         if (is_null($bearer)) {
-            return response(['message' => 'Invalid token'], 403)->header('Content-Type', 'application/json');
+            return response(['message' => 'Invalid Token'], 403)->header('Content-Type', 'application/json');
         } else {
             return $next($request);
         }

@@ -13,6 +13,8 @@
 
 В коллекции postman есть переменная host - в ней хост надо поменять на тот, что настроен в env
 
+Всё должно работать!
+
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).

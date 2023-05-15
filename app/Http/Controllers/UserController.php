@@ -21,7 +21,10 @@ class UserController extends Controller
             return Controller::convertValidator($validator);
         }
         $user = User::where('username', $request->input('username'))->get()->first();
-        if ($request->input('password') != $user->password || is_null($user)) {
+        if (is_null($user)) {
+            return response(['message' => 'Invalid credentials'], 400)->header('Content-Type', 'application/json');
+        }
+        if ($request->input('password') != $user->password) {
             return response(['message' => 'Invalid credentials'], 400)->header('Content-Type', 'application/json');
         }
         if ($user->accessToken != "") {
